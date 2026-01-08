@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zerion Task Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/taskmanager.css') }}">
+</head>
+<body>
+    <div class="window">
+        <!-- Title Bar -->
+        <div class="title-bar">
+            <div class="title-bar-text">
+                <span class="icon">⚡</span>
+                Zerion Task Manager
+            </div>
+            <div class="title-bar-controls">
+                <button>_</button>
+                <button>□</button>
+                <button>×</button>
+            </div>
+        </div>
+
+        <!-- Menu Bar -->
+        <div class="menu-bar">
+            <ul>
+                <li>File</li>
+                <li>Options</li>
+                <li>View</li>
+                <li>Help</li>
+            </ul>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tab-container">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('portfolio')">Portfolio</div>
+                <div class="tab" onclick="switchTab('positions')">Positions</div>
+                <div class="tab" onclick="switchTab('transactions')">Transactions</div>
+                <div class="tab" onclick="switchTab('nfts')">NFTs</div>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content">
+            <!-- Wallet Input -->
+            <div class="input-group">
+                <label>Wallet Address:</label>
+                <input type="text" id="walletAddress" placeholder="Enter Ethereum wallet address (e.g., 0x...)">
+                <button class="win-button" onclick="loadWallet()" style="margin-top: 8px;">Load Wallet Data</button>
+            </div>
+
+            <!-- Portfolio Tab -->
+            <div id="portfolio" class="tab-content active">
+                <div id="portfolioData">
+                    <div class="panel">
+                        <div class="panel-title">Welcome to Zerion Task Manager</div>
+                        <p style="font-size: 11px; padding: 8px;">
+                            Enter a wallet address above and click "Load Wallet Data" to view on-chain data in classic Windows NT style.
+                        </p>
+                        <p style="font-size: 11px; padding: 8px;">
+                            <strong>Try these example wallets:</strong><br>
+                            • vitalik.eth: 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045<br>
+                            • Opensea: 0x5b3256965e7C3cF26E11FCAf296DfC8807C01073<br>
+                            • Coinbase: 0x71660c4005ba85c37ccec55d0c4493e66fe775d3
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Positions Tab -->
+            <div id="positions" class="tab-content">
+                <div id="positionsData">
+                    <div class="loading">Load a wallet address to view positions</div>
+                </div>
+            </div>
+
+            <!-- Transactions Tab -->
+            <div id="transactions" class="tab-content">
+                <div id="transactionsData">
+                    <div class="loading">Load a wallet address to view transactions</div>
+                </div>
+            </div>
+
+            <!-- NFTs Tab -->
+            <div id="nfts" class="tab-content">
+                <div id="nftsData">
+                    <div class="loading">Load a wallet address to view NFTs</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-item">
+                <span id="statusWallet">Wallet: Not loaded</span>
+            </div>
+            <div class="status-item">
+                <span id="statusTime">Updated: --:--:--</span>
+            </div>
+            <div class="status-item">
+                <span>API: Zerion v1</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
