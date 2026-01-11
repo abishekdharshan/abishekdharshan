@@ -5,6 +5,7 @@ Compare Uber, Lyft, and Curb prices in NYC
 
 import os
 import logging
+from typing import Optional, Tuple
 from math import radians, cos, sin, asin, sqrt
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
@@ -66,7 +67,7 @@ def estimate_duration(miles: float) -> int:
     return max(5, int((miles / avg_speed) * 60))
 
 
-def calculate_fare(pricing: dict, miles: float, minutes: int, surge: float = 1.0) -> tuple[float, float]:
+def calculate_fare(pricing: dict, miles: float, minutes: int, surge: float = 1.0) -> Tuple[float, float]:
     """Calculate estimated fare range."""
     if "flag_drop" in pricing:  # Taxi pricing
         base_fare = pricing["flag_drop"] + (miles * pricing["per_mile"])
@@ -88,7 +89,7 @@ def calculate_fare(pricing: dict, miles: float, minutes: int, surge: float = 1.0
     return round(low, 2), round(high, 2)
 
 
-def geocode_address(address: str, bias_nyc: bool = True) -> dict | None:
+def geocode_address(address: str, bias_nyc: bool = True) -> Optional[dict]:
     """Geocode an address, with NYC bias."""
     try:
         # Add NYC context if not already present
