@@ -182,16 +182,19 @@ def get_price_comparison(pickup: dict, dropoff: dict) -> str:
 
 
 def get_deep_links(address: str) -> InlineKeyboardMarkup:
-    """Generate deep links to open each app."""
-    encoded = address.replace(" ", "+")
+    """Generate web links to open each app."""
+    import urllib.parse
+    encoded = urllib.parse.quote(address)
 
     keyboard = [
         [
-            InlineKeyboardButton("Open Uber", url=f"uber://?action=setPickup&dropoff[formatted_address]={encoded}"),
-            InlineKeyboardButton("Open Lyft", url=f"lyft://ridetype?id=lyft&destination[address]={encoded}")
+            InlineKeyboardButton("Open Uber", url=f"https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]={encoded}"),
         ],
         [
-            InlineKeyboardButton("Open Curb", url="curb://")
+            InlineKeyboardButton("Open Lyft", url=f"https://lyft.com/ride?destination[address]={encoded}"),
+        ],
+        [
+            InlineKeyboardButton("Open Curb", url="https://app.gocurb.com/")
         ]
     ]
     return InlineKeyboardMarkup(keyboard)
