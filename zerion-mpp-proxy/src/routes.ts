@@ -1,12 +1,12 @@
 import { Hono } from 'hono'
-import { Mppx, tempo } from 'mppx/server'
+import { Mppx, tempo } from 'mppx/hono'
 import { config } from './config.js'
 import { forwardToZerion } from './proxy.js'
 import { healthCheck } from './health.js'
 import { logPayment, logError } from './logger.js'
 
 // ---------------------------------------------------------------------------
-// Mppx instance – handles 402 challenge / credential / receipt flow
+// Mppx instance – Hono-native middleware that auto-handles 402/receipt flow
 // ---------------------------------------------------------------------------
 const mppx = Mppx.create({
   methods: [
@@ -29,45 +29,34 @@ app.get('/health', healthCheck)
 app.get('/healthz', healthCheck)
 
 // MPP-gated Zerion API routes ----------------------------------------------
-// Catch-all: any /v1/* request goes through the MPP charge middleware and
-// then gets proxied to the Zerion upstream.
-app.all('/v1/*', async (c) => {
-  const start = Date.now()
-  const endpoint = `${c.req.method} ${c.req.path}`
+// mppx.charge() is native Hono middleware: returns 402 if unpaid, calls
+// next() if paid, and auto-attaches the Payment-Receipt header on response.
+app.all(
+  '/v1/*',
+  mppx.charge({ amount: config.mppChargeAmount }),
+  async (c) => {
+    const start = Date.now()
+    const endpoint = `${c.req.method} ${c.req.path}`
 
-  try {
-    const response = await mppx.charge({
-      amount: config.mppChargeAmount,
-    })(c.req.raw)
+    try {
+      const upstreamResponse = await forwardToZerion(c.req.raw)
+      const durationMs = Date.now() - start
 
-    // If payment is required, return the 402 challenge
-    if (response.status === 402) {
-      logPayment({ endpoint, amount: config.mppChargeAmount, status: 'challenge' })
-      return new Response(response.challenge.body, {
-        status: response.challenge.status,
-        headers: response.challenge.headers,
+      logPayment({
+        endpoint,
+        amount: config.mppChargeAmount,
+        status: 'charged',
+        durationMs,
       })
+
+      return upstreamResponse
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      logError('Proxy error', { endpoint, error: message })
+      return c.json({ error: 'Internal proxy error', detail: message }, 502)
     }
-
-    // Payment verified – proxy to Zerion
-    const upstreamResponse = await forwardToZerion(c.req.raw)
-    const durationMs = Date.now() - start
-
-    logPayment({
-      endpoint,
-      amount: config.mppChargeAmount,
-      status: 'charged',
-      durationMs,
-    })
-
-    // Attach MPP receipt to the upstream response
-    return response.withReceipt(upstreamResponse)
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    logError('Payment or proxy error', { endpoint, error: message })
-    return c.json({ error: 'Internal proxy error', detail: message }, 502)
-  }
-})
+  },
+)
 
 // Root – informational ------------------------------------------------------
 app.get('/', (c) =>
