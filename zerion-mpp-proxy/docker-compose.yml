@@ -1,0 +1,16 @@
+services:
+  zerion-mpp-proxy:
+    build: .
+    ports:
+      - "${PORT:-3402}:3402"
+    env_file:
+      - .env
+    environment:
+      - PORT=3402
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3402/health').then(r=>{if(!r.ok)throw 1})"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
