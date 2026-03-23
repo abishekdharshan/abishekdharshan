@@ -9,15 +9,58 @@ AI agents can query any Zerion endpoint by paying **$0.01 per request** in pathU
 ```
 Agent ──► MPP Proxy (this service) ──► Zerion public-api (Go)
           │                                     │
-          │  1. No payment → 402 challenge      │
-          │  2. Valid credential → proxy + receipt│
+          │  1. Invalid path → 404 (no charge)  │
+          │  2. No payment → 402 challenge      │
+          │  3. Valid credential → proxy + receipt│
+          │  4. Replayed credential → 409        │
           └─────────────────────────────────────┘
 ```
 
-1. Agent calls any `/v1/*` endpoint without payment → proxy returns **HTTP 402** with MPP challenge
-2. Agent signs payment credential (handled automatically by `mppx` CLI or SDK)
-3. Agent retries with signed credential in `Authorization` header
-4. Proxy verifies payment via `mppx`, forwards to Zerion API, returns data + receipt
+1. Agent calls any `/v1/*` endpoint → proxy first validates the path is a known Zerion route (unknown paths return **404 with no charge**)
+2. Valid path, no payment → proxy returns **HTTP 402** with MPP challenge
+3. Agent signs payment credential (handled automatically by `mppx` CLI or SDK)
+4. Agent retries with signed credential → proxy verifies payment, checks for replay, forwards to Zerion API, returns data + receipt
+5. If the same credential is resubmitted → proxy returns **HTTP 409** (replay blocked)
+
+## Security
+
+### Replay protection
+
+Every verified payment credential is tracked in an in-memory store (TTL: 1 hour, max 100k entries). Resubmitting a used credential returns `409 Conflict`. For multi-instance deployments, swap the in-memory store for Redis (`SET key EX ttl NX`).
+
+### URL validation (pre-payment)
+
+Requests to unknown paths (e.g., `/v1/nonexistent`) are rejected with `404` **before** the payment flow starts, so agents never pay for resources that don't exist.
+
+## Observability
+
+### Prometheus metrics
+
+`GET /metrics` exposes counters and histograms in Prometheus text format:
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `mpp_challenges_total` | counter | 402 challenges issued |
+| `mpp_payments_verified_total` | counter | Successful payments |
+| `mpp_replays_blocked_total` | counter | Replay attempts rejected |
+| `proxy_requests_total` | counter | Requests forwarded upstream |
+| `proxy_errors_total` | counter | Upstream errors |
+| `proxy_404_blocked_total` | counter | Requests blocked by URL validator |
+| `http_responses_2xx_total` | counter | 2xx responses |
+| `http_responses_4xx_total` | counter | 4xx responses |
+| `http_responses_5xx_total` | counter | 5xx responses |
+| `proxy_upstream_latency_ms` | histogram | Upstream response latency |
+| `receipt_store_size` | gauge | Current receipt store entries |
+
+### Structured logging
+
+All logs are JSON-structured for ingestion by Datadog, Loki, CloudWatch, etc.
+
+### Suggested alerts
+
+- `rate(mpp_replays_blocked_total[5m]) > 0` — someone is attempting replay attacks
+- `rate(proxy_errors_total[5m]) / rate(proxy_requests_total[5m]) > 0.05` — upstream error rate > 5%
+- `proxy_upstream_latency_ms_bucket{le="5000"} / proxy_upstream_latency_ms_count < 0.95` — p95 latency > 5s
 
 ## Quick start
 
@@ -55,6 +98,7 @@ All standard Zerion API v1 endpoints are supported:
 | `GET /v1/dapps/` | DApp catalog |
 | `GET /v1/nfts/` | NFT catalog |
 | `GET /health` | Health check |
+| `GET /metrics` | Prometheus metrics |
 
 ## Environment variables
 
@@ -86,4 +130,20 @@ docker compose up --build
 
 This is a **sidecar proxy** pattern. The Go `public-api` service is untouched — this TypeScript service sits in front of it and handles MPP payment verification using the official [`mppx`](https://www.npmjs.com/package/mppx) SDK by Wevm/Tempo.
 
-When Ivan returns from vacation, the MPP logic can optionally be moved into the Go codebase as native middleware (similar to the existing x402 implementation).
+### Language choice
+
+The proxy is written in TypeScript (Node.js) because the `mppx` SDK is JS-native and was the fastest path to a working prototype. Ivan's recommendation to evaluate Python (or Go) for long-term maintainability is noted — the team has deeper expertise in those languages. If this moves to production, consider:
+
+- **Python**: Tempo ships `pympp`; aligns with existing backend services
+- **Go**: Native integration into `public-api` as middleware (like the existing x402 impl)
+- **Keep JS**: If the proxy stays as a standalone sidecar, the JS implementation is fine
+
+### Production checklist (from Ivan's review)
+
+- [x] Replay protection — in-memory credential tracking (swap to Redis for multi-instance)
+- [x] URL validation — pre-payment path validation prevents paying for 404s
+- [x] Observability — Prometheus `/metrics` endpoint, structured JSON logging, suggested alert rules
+- [ ] Set real `MPP_RECIPIENT_ADDRESS` (register Tempo wallet)
+- [ ] Generate and persist `MPP_SECRET_KEY`
+- [ ] Switch to production Zerion API key
+- [ ] Deploy with proper infra (Kubernetes, Fly.io, etc.)
