@@ -2,4 +2,4 @@
 
 - 👨‍💻 Pushing 🅿️roduct @ Zerion
 - 📍 NYC
-- 🐦 You can find me on the bird app @abishekinguout
+- 🐦 You can find me on the bird app @abishek
