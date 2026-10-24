@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+demo-data/
+# Personal data never belongs in this repo (see CLAUDE.md)
+data/
+fintrack-data/
+ledger.csv
+report.html

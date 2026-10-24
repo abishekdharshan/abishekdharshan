@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personal Finances</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10); --wash: rgba(11,11,11,0.04);
+  --earned: #2a78d6; --spent: #eb6834; --balance: #1baf7a; --good: #006300; --bad: #d03b3b;
+  --h0: #f0efec; --h1: #cde2fb; --h2: #9ec5f4; --h3: #6da7ec; --h4: #3987e5; --h5: #256abf; --h6: #184f95;
+  --t0: #0b0b0b; --t1: #0b0b0b; --t2: #0b0b0b; --t3: #0b0b0b; --t4: #ffffff; --t5: #ffffff; --t6: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --wash: rgba(255,255,255,0.05);
+    --earned: #3987e5; --spent: #d95926; --balance: #199e70; --good: #0ca30c; --bad: #e66767;
+    --h0: #262624; --h1: #0d366b; --h2: #104281; --h3: #184f95; --h4: #256abf; --h5: #3987e5; --h6: #6da7ec;
+    --t0: #f0efec; --t1: #ffffff; --t2: #ffffff; --t3: #ffffff; --t4: #ffffff; --t5: #0b0b0b; --t6: #0b0b0b;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --wash: rgba(255,255,255,0.05);
+  --earned: #3987e5; --spent: #d95926; --balance: #199e70; --good: #0ca30c; --bad: #e66767;
+  --h0: #262624; --h1: #0d366b; --h2: #104281; --h3: #184f95; --h4: #256abf; --h5: #3987e5; --h6: #6da7ec;
+  --t0: #f0efec; --t1: #ffffff; --t2: #ffffff; --t3: #ffffff; --t4: #ffffff; --t5: #0b0b0b; --t6: #0b0b0b;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1120px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 28px; line-height: 1.2; margin: 0 0 6px; font-weight: 650; }
+h2 { font-size: 18px; margin: 40px 0 4px; font-weight: 620; }
+h3 { font-size: 14px; margin: 0 0 2px; font-weight: 600; }
+p { margin: 0; }
+.sub { color: var(--ink-2); }
+.muted { color: var(--muted); font-size: 12px; }
+.lede { font-size: 16px; color: var(--ink-2); margin-top: 14px; max-width: 760px; }
+.lede b { color: var(--ink); font-weight: 600; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 18px 14px; margin-top: 14px; min-width: 0; }
+.card-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; margin-bottom: 12px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid2 > .card { margin-top: 14px; }
+@media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; gap: 0; } }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+@media (max-width: 760px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.kpi .label { color: var(--ink-2); font-size: 13px; }
+.kpi .value { font-size: 26px; font-weight: 620; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi .delta { font-size: 12px; margin-top: 2px; color: var(--muted); }
+.up-good, .down-good { color: var(--good); } .up-bad, .down-bad { color: var(--bad); }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; color: var(--ink-2); font-size: 12px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.key-rect { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.key-line { width: 14px; height: 2px; border-radius: 1px; display: inline-block; }
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; overflow: visible; }
+.chart text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart .gridline { stroke: var(--grid); stroke-width: 1; }
+.chart .baseline { stroke: var(--axis); stroke-width: 1; }
+.chart .hit { fill: transparent; cursor: default; }
+.chart .hit:focus { outline: none; }
+.chart .bar:hover, .chart .bar.active { filter: brightness(1.12); }
+.chart .crosshair { stroke: var(--axis); stroke-width: 1; }
+.tooltip { position: fixed; pointer-events: none; z-index: 10; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12); min-width: 140px; display: none; }
+.tooltip .tt-title { color: var(--ink-2); margin-bottom: 4px; }
+.tooltip .tt-row { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.tooltip .tt-row b { font-weight: 620; font-variant-numeric: tabular-nums; }
+.tooltip .tt-name { color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 7px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th { font-weight: 560; color: var(--ink-2); font-size: 12px; }
+th:first-child, td:first-child { text-align: left; }
+td.l, th.l { text-align: left; }
+tr:last-child td { border-bottom: none; }
+.scroll { overflow-x: auto; }
+.filters { position: sticky; top: 0; z-index: 5; background: var(--page); padding: 12px 0; margin-top: 28px;
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--grid); }
+.filters .lbl { color: var(--ink-2); margin-right: 4px; }
+.chip { border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 999px;
+  padding: 5px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+.chip:hover { background: var(--wash); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--page); border-color: var(--ink); }
+.hrows { display: grid; gap: 6px; }
+.hrow { display: grid; grid-template-columns: minmax(90px, 170px) 1fr minmax(118px, auto); gap: 10px; align-items: center; }
+.hrow .hl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hrow .ht { height: 14px; position: relative; }
+.hrow .hb { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0; min-width: 2px; }
+.hrow .hv { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hrow .hv .muted { margin-left: 6px; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+input[type=search], select { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 10px; }
+input[type=search] { flex: 1 1 220px; min-width: 0; }
+td.desc { white-space: normal; color: var(--muted); font-size: 12px; max-width: 360px; min-width: 180px; overflow-wrap: anywhere; }
+th.desc { text-align: left; }
+.neg { color: var(--ink); } .pos { color: var(--good); }
+.timeline { position: relative; height: 10px; background: var(--h0); border-radius: 5px; min-width: 120px; }
+.timeline i { position: absolute; top: 0; bottom: 0; background: var(--earned); border-radius: 5px; }
+.warn { border-left: 3px solid var(--bad); padding: 8px 12px; background: var(--surface); margin-top: 8px; border-radius: 0 8px 8px 0; }
+details summary { cursor: pointer; color: var(--ink-2); font-size: 12px; margin-top: 10px; }
+code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--wash); padding: 1px 4px; border-radius: 4px; }
+.empty { color: var(--muted); padding: 16px 0; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Personal finances</h1>
+    <p class="sub" id="subtitle"></p>
+    <p class="lede" id="lede"></p>
+  </header>
+  <div id="warnings"></div>
+
+  <h2>How you've grown</h2>
+  <p class="muted">Earned = paychecks, interest, dividends and crypto rewards. Spent = everything you paid for, net of refunds. Moving money between your own accounts (card payments, brokerage deposits, trades) counts as neither.</p>
+  <div class="kpis" id="kpis-all"></div>
+
+  <div class="card">
+    <div class="card-head"><h3>Earned vs spent, by year</h3>
+      <div class="legend"><span><i class="key-rect" style="background:var(--earned)"></i>Earned</span><span><i class="key-rect" style="background:var(--spent)"></i>Spent</span></div></div>
+    <div class="chart" id="chart-years"></div>
+    <div class="scroll" style="margin-top:12px"><table id="table-years"></table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h3>Every month</h3>
+      <div class="legend"><span><i class="key-line" style="background:var(--earned)"></i>Earned</span><span><i class="key-line" style="background:var(--spent)"></i>Spent</span></div></div>
+    <div class="chart" id="chart-months"></div>
+    <details><summary>Show as table</summary><div class="scroll"><table id="table-months"></table></div></details>
+  </div>
+
+  <div class="card" id="card-wealth">
+    <div class="card-head"><h3 id="wealth-title">Wealth over time</h3><div class="legend" id="wealth-legend"></div></div>
+    <p class="muted" id="wealth-note" style="margin:-6px 0 10px"></p>
+    <div class="chart" id="chart-wealth"></div>
+    <details><summary>Show as table</summary><div class="scroll"><table id="table-wealth"></table></div></details>
+  </div>
+
+  <div class="card" id="card-w2">
+    <div class="card-head"><h3>Gross pay (from W-2s)</h3></div>
+    <div class="chart" id="chart-w2"></div>
+    <div class="scroll" style="margin-top:12px"><table id="table-w2"></table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h3>Spending by category, per year</h3><span class="muted">Darker = more money. Negative = refunds exceeded spending.</span></div>
+    <div class="scroll"><table class="heat" id="table-heat"></table></div>
+  </div>
+
+  <div class="filters" role="group" aria-label="Period" id="filters"><span class="lbl">Period</span></div>
+
+  <div class="kpis" id="kpis-period"></div>
+  <div class="grid2">
+    <div class="card"><div class="card-head"><h3>Where the money went</h3><span class="muted" id="spent-total"></span></div><div class="hrows" id="bars-spent"></div></div>
+    <div class="card"><div class="card-head"><h3>Where it came from</h3><span class="muted" id="earned-total"></span></div><div class="hrows" id="bars-earned"></div></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h3>Top merchants</h3></div>
+    <div class="scroll"><table id="table-merchants"></table></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h3>Transactions</h3><span class="muted" id="tx-summary"></span></div>
+    <div class="controls">
+      <input type="search" id="tx-q" placeholder="Search merchant or description" aria-label="Search transactions">
+      <select id="tx-kind" aria-label="Kind"><option value="spend">Spending</option><option value="earn">Earnings</option><option value="move">Transfers &amp; trades</option><option value="all">Everything</option></select>
+      <select id="tx-cat" aria-label="Category"></select>
+      <select id="tx-acct" aria-label="Account"></select>
+    </div>
+    <div class="scroll"><table class="tx" id="table-tx"></table></div>
+    <button class="chip" type="button" id="tx-more" style="margin-top:10px">Show more</button>
+  </div>
+
+  <h2>Data health</h2>
+  <p class="muted">Gaps here make the totals above wrong. Each account should cover the whole period.</p>
+  <div class="card">
+    <div class="card-head"><h3>Accounts and coverage</h3></div>
+    <div class="scroll"><table id="table-accounts"></table></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="card-head"><h3>Needs a category</h3></div>
+      <p class="muted" style="margin:-6px 0 10px">Add a line to <code>rules.csv</code> for each, then rebuild.</p>
+      <div class="scroll"><table id="table-uncat"></table></div></div>
+    <div class="card"><div class="card-head"><h3>Excluded from earned / spent</h3></div>
+      <p class="muted" style="margin:-6px 0 10px">Money moving between your own accounts. Money in and out should roughly cancel.</p>
+      <div class="scroll"><table id="table-excluded"></table></div></div>
+  </div>
+  <p class="muted" style="margin-top:24px" id="footer"></p>
+</main>
+<div class="tooltip" id="tooltip" role="status" aria-live="polite"></div>
+
+<script id="data" type="application/json">/*__DATA__*/null</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("data").textContent);
+const $ = (id) => document.getElementById(id);
+const SVG = "http://www.w3.org/2000/svg";
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// ---------- formatting ----------
+const money = (v) => (v < 0 ? "-$" : "$") + Math.round(Math.abs(v)).toLocaleString("en-US");
+const cents = (v) => (v < 0 ? "-$" : "$") + Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function compact(v) {
+  const a = Math.abs(v), s = v < 0 ? "-$" : "$";
+  if (a >= 1e6) return s + (a / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace(/\.0$/, "") + "M";
+  if (a >= 1e3) return s + (a / 1e3).toFixed(a >= 1e5 ? 0 : 1).replace(/\.0$/, "") + "K";
+  return s + Math.round(a);
+}
+const pct = (v) => (v == null || !isFinite(v)) ? "–" : Math.round(v * 100) + "%";
+const monthLabel = (m) => MONTHS[+m.slice(5, 7) - 1] + " " + m.slice(0, 4);
+function el(tag, attrs, text) {
+  const e = document.createElement(tag);
+  for (const k in attrs || {}) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  return e;
+}
+function sv(tag, attrs) { const e = document.createElementNS(SVG, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+
+// ---------- data model ----------
+const CATS = D.categories, ACCTS = D.accounts;
+const T = D.txns.map((r) => ({ date: r[0], month: r[0].slice(0, 7), year: r[0].slice(0, 4), acct: r[1], merchant: r[2],
+  desc: r[3], amount: r[4], cat: r[5], id: r[6], kind: CATS[r[5]].kind }));
+const FLOW = T.filter((t) => t.kind === "income" || t.kind === "expense");
+const allMonths = [];
+if (T.length) {
+  const first = (FLOW[0] || T[0]).month, last = T[T.length - 1].month;
+  let [y, m] = first.split("-").map(Number);
+  for (;;) { const k = `${y}-${String(m).padStart(2, "0")}`; allMonths.push(k); if (k >= last) break; m++; if (m > 12) { m = 1; y++; } }
+}
+const firstMonth = allMonths[0], lastMonth = allMonths[allMonths.length - 1];
+const years = [...new Set(allMonths.map((m) => m.slice(0, 4)))];
+const yearMonths = (y) => allMonths.filter((m) => m.startsWith(y));
+const isFullYear = (y) => yearMonths(y).length === 12;
+
+function totals(filter) {
+  let earned = 0, spent = 0;
+  for (const t of FLOW) if (filter(t)) { if (t.kind === "income") earned += t.amount; else spent -= t.amount; }
+  return { earned, spent, saved: earned - spent, rate: earned > 0 ? (earned - spent) / earned : null };
+}
+const inMonths = (lo, hi) => (t) => t.month >= lo && t.month <= hi;
+function shiftMonth(m, delta) {
+  let y = +m.slice(0, 4), mo = +m.slice(5, 7) + delta;
+  while (mo < 1) { mo += 12; y--; } while (mo > 12) { mo -= 12; y++; }
+  return `${y}-${String(mo).padStart(2, "0")}`;
+}
+const monthly = allMonths.map((m) => ({ month: m, ...totals((t) => t.month === m) }));
+const yearly = years.map((y) => {
+  const ms = yearMonths(y);
+  const cur = totals(inMonths(ms[0], ms[ms.length - 1]));
+  const prevLo = shiftMonth(ms[0], -12), prevHi = shiftMonth(ms[ms.length - 1], -12);
+  const prev = prevLo >= firstMonth ? totals(inMonths(prevLo, prevHi)) : null;
+  return { year: y, months: ms, full: ms.length === 12, ...cur, prev };
+});
+
+// ---------- tooltip ----------
+const tip = $("tooltip");
+function showTip(evt, title, rows) {
+  tip.replaceChildren(el("div", { class: "tt-title" }, title));
+  for (const r of rows) {
+    const row = el("div", { class: "tt-row" });
+    const name = el("span", { class: "tt-name" });
+    if (r.color) { const k = el("i", { class: "key-line" }); k.style.background = r.color; name.append(k); }
+    name.append(document.createTextNode(r.name));
+    row.append(el("b", {}, r.value), name);
+    tip.append(row);
+  }
+  tip.style.display = "block";
+  let x, y;
+  if (evt && evt.clientX != null) { x = evt.clientX; y = evt.clientY; }
+  else { const b = evt.target.getBoundingClientRect(); x = b.left + b.width / 2; y = b.top; }
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, x + 14)) + "px";
+  tip.style.top = Math.max(8, Math.min(window.innerHeight - h - 8, y - h - 12 < 8 ? y + 16 : y - h - 12)) + "px";
+}
+function hideTip() { tip.style.display = "none"; }
+
+// ---------- chart helpers ----------
+function niceStep(max, n) {
+  const raw = max / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const f = raw / mag;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * mag;
+}
+function scaleY(min, max, h, top) {
+  if (max <= min) max = min + 1;
+  const step = niceStep(max - min, 4);
+  const lo = Math.floor(min / step) * step, hi = Math.ceil(max / step) * step;
+  const ticks = []; for (let v = lo; v <= hi + step / 2; v += step) ticks.push(v);
+  return { ticks, y: (v) => top + h - ((v - lo) / (hi - lo)) * h, lo, hi };
+}
+function axes(svg, sy, W, m) {
+  for (const v of sy.ticks) {
+    const y = sy.y(v);
+    svg.append(sv("line", { x1: m.l, x2: W - m.r, y1: y, y2: y, class: v === 0 ? "baseline" : "gridline" }));
+    const t = sv("text", { x: m.l - 8, y: y + 4, "text-anchor": "end" }); t.textContent = compact(v); svg.append(t);
+  }
+}
+function colPath(x, y0, w, y1, r) {
+  const h = y0 - y1; if (h <= 0) return "";
+  r = Math.min(r, w / 2, h);
+  return `M${x},${y0}V${y1 + r}Q${x},${y1} ${x + r},${y1}H${x + w - r}Q${x + w},${y1} ${x + w},${y1 + r}V${y0}Z`;
+}
+
+// Grouped columns. series: [{name, color, values}]
+function columns(host, labels, series, opts = {}) {
+  host.replaceChildren();
+  const W = Math.max(280, host.clientWidth), H = 240, m = { t: 10, r: 8, b: 26, l: 56 };
+  const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": opts.label || "" });
+  const max = Math.max(1, ...series.flatMap((s) => s.values));
+  const sy = scaleY(0, max, H - m.t - m.b, m.t);
+  axes(svg, sy, W, m);
+  const band = (W - m.l - m.r) / labels.length;
+  const barW = Math.max(6, Math.min(24, (band * 0.62 - 2 * (series.length - 1)) / series.length));
+  const groupW = barW * series.length + 2 * (series.length - 1);
+  labels.forEach((lab, i) => {
+    const gx = m.l + i * band + (band - groupW) / 2;
+    series.forEach((s, j) => {
+      const v = s.values[i]; const x = gx + j * (barW + 2);
+      const p = sv("path", { d: colPath(x, sy.y(0), barW, sy.y(Math.max(0, v)), 4), fill: s.color, class: "bar" });
+      svg.append(p);
+    });
+    const hit = sv("rect", { x: m.l + i * band, y: m.t, width: band, height: H - m.t - m.b, class: "hit", tabindex: 0,
+      "aria-label": `${lab}: ` + series.map((s) => `${s.name} ${money(s.values[i])}`).join(", ") });
+    const show = (e) => showTip(e, opts.titles ? opts.titles[i] : lab, series.map((s) => ({ name: s.name, value: money(s.values[i]), color: s.color })));
+    hit.addEventListener("pointermove", show); hit.addEventListener("focus", show);
+    hit.addEventListener("pointerleave", hideTip); hit.addEventListener("blur", hideTip);
+    svg.append(hit);
+    const t = sv("text", { x: m.l + i * band + band / 2, y: H - 8, "text-anchor": "middle" }); t.textContent = lab; svg.append(t);
+  });
+  host.append(svg);
+}
+
+// Lines with crosshair. series: [{name, color, values (null = gap)}]
+function lines(host, labels, series, opts = {}) {
+  host.replaceChildren();
+  const W = Math.max(280, host.clientWidth), H = opts.height || 240, m = { t: 10, r: 12, b: 26, l: 56 };
+  const svg = sv("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": opts.label || "" });
+  const vals = series.flatMap((s) => s.values).filter((v) => v != null);
+  const sy = scaleY(Math.min(0, ...vals), Math.max(1, ...vals), H - m.t - m.b, m.t);
+  axes(svg, sy, W, m);
+  const n = labels.length, x = (i) => m.l + (n === 1 ? (W - m.l - m.r) / 2 : (i / (n - 1)) * (W - m.l - m.r));
+  const every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor((W - m.l - m.r) / 70))));
+  labels.forEach((lab, i) => {
+    const isJan = lab.endsWith("-01");
+    if (n > 24 ? isJan : i % every === 0) {
+      const t = sv("text", { x: x(i), y: H - 8, "text-anchor": "middle" });
+      t.textContent = n > 24 ? lab.slice(0, 4) : monthLabel(lab).replace(" 20", " '"); svg.append(t);
+    }
+  });
+  for (const s of series) {
+    let d = "", pen = false, area = "";
+    s.values.forEach((v, i) => {
+      if (v == null) { pen = false; return; }
+      d += (pen ? "L" : "M") + x(i).toFixed(1) + "," + sy.y(v).toFixed(1); pen = true;
+    });
+    if (s.area) {
+      const idx = s.values.map((v, i) => (v == null ? null : i)).filter((i) => i != null);
+      if (idx.length) area = d + `L${x(idx[idx.length - 1])},${sy.y(Math.max(sy.lo, 0))}L${x(idx[0])},${sy.y(Math.max(sy.lo, 0))}Z`;
+      svg.append(sv("path", { d: area, fill: s.color, "fill-opacity": 0.1, stroke: "none" }));
+    }
+    svg.append(sv("path", { d, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+  }
+  const cross = sv("line", { y1: m.t, y2: H - m.b, class: "crosshair", visibility: "hidden" });
+  svg.append(cross);
+  const dots = series.map((s) => { const c = sv("circle", { r: 4, fill: s.color, stroke: "var(--surface)", "stroke-width": 2, visibility: "hidden" }); svg.append(c); return c; });
+  const overlay = sv("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, class: "hit", tabindex: 0,
+    "aria-label": (opts.label || "Chart") + ". Use arrow keys to read values." });
+  let cur = n - 1;
+  const showAt = (i, e) => {
+    cur = i; const cx = x(i);
+    cross.setAttribute("x1", cx); cross.setAttribute("x2", cx); cross.setAttribute("visibility", "visible");
+    series.forEach((s, j) => {
+      const v = s.values[i];
+      dots[j].setAttribute("visibility", v == null ? "hidden" : "visible");
+      if (v != null) { dots[j].setAttribute("cx", cx); dots[j].setAttribute("cy", sy.y(v)); }
+    });
+    const rows = series.filter((s) => s.values[i] != null).map((s) => ({ name: s.name, value: money(s.values[i]), color: s.color }));
+    if (opts.extra) rows.push(...opts.extra(i));
+    const r = svg.getBoundingClientRect();
+    showTip(e && e.clientX != null ? e : { clientX: r.left + cx, clientY: r.top + m.t + 20 }, monthLabel(labels[i]), rows);
+  };
+  const hide = () => { cross.setAttribute("visibility", "hidden"); dots.forEach((d) => d.setAttribute("visibility", "hidden")); hideTip(); };
+  overlay.addEventListener("pointermove", (e) => {
+    const r = svg.getBoundingClientRect(); const px = e.clientX - r.left;
+    showAt(Math.max(0, Math.min(n - 1, Math.round(((px - m.l) / (W - m.l - m.r)) * (n - 1)))), e);
+  });
+  overlay.addEventListener("pointerleave", hide); overlay.addEventListener("blur", hide);
+  overlay.addEventListener("focus", () => showAt(cur));
+  overlay.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft") { showAt(Math.max(0, cur - 1)); e.preventDefault(); }
+    if (e.key === "ArrowRight") { showAt(Math.min(n - 1, cur + 1)); e.preventDefault(); }
+  });
+  svg.append(overlay);
+  host.append(svg);
+}
+
+function table(host, head, rows, leftCols = 1) {
+  host.replaceChildren();
+  const thead = el("thead"), tr = el("tr");
+  const descCol = rows.length ? rows[0].findIndex((c) => c && typeof c === "object" && c.cls === "desc") : -1;
+  head.forEach((h, i) => tr.append(el("th", i < leftCols ? { class: "l" } : i === descCol ? { class: "desc" } : {}, h)));
+  thead.append(tr);
+  const tbody = el("tbody");
+  for (const r of rows) {
+    const row = el("tr");
+    r.forEach((c, i) => {
+      const cell = c && typeof c === "object" ? c : { text: c };
+      const td = el("td", i < leftCols ? { class: "l" } : {}, cell.text);
+      if (cell.cls) td.className += " " + cell.cls;
+      if (cell.title) td.title = cell.title;
+      row.append(td);
+    });
+    tbody.append(row);
+  }
+  host.append(thead, tbody);
+}
+
+function delta(cur, prev, upIsGood, asPoints) {
+  if (prev == null || cur == null) return { text: "", cls: "" };
+  if (asPoints) {
+    const d = Math.round((cur - prev) * 100);
+    return { text: `${d >= 0 ? "▲" : "▼"} ${Math.abs(d)} pts`, cls: (d >= 0) === upIsGood ? "up-good" : "up-bad" };
+  }
+  if (!prev) return { text: "", cls: "" };
+  const d = (cur - prev) / Math.abs(prev);
+  return { text: `${d >= 0 ? "▲" : "▼"} ${Math.abs(Math.round(d * 100))}%`, cls: (d >= 0) === upIsGood ? "up-good" : "up-bad" };
+}
+
+function kpis(host, cur, prev, prevLabel) {
+  host.replaceChildren();
+  const tiles = [
+    ["Earned", money(cur.earned), prev && delta(cur.earned, prev.earned, true)],
+    ["Spent", money(cur.spent), prev && delta(cur.spent, prev.spent, false)],
+    ["Saved", money(cur.saved), prev && delta(cur.saved, prev.saved, true)],
+    ["Savings rate", pct(cur.rate), prev && delta(cur.rate, prev.rate, true, true)],
+  ];
+  for (const [label, value, d] of tiles) {
+    const k = el("div", { class: "kpi" });
+    k.append(el("div", { class: "label" }, label), el("div", { class: "value" }, value));
+    const dd = el("div", { class: "delta" });
+    if (d && d.text) { dd.append(el("span", { class: d.cls }, d.text), document.createTextNode(" vs " + prevLabel)); }
+    else dd.textContent = prevLabel && prev === null ? "" : " ";
+    k.append(dd);
+    host.append(k);
+  }
+}
+
+// ---------- header ----------
+function header() {
+  if (!T.length) {
+    $("subtitle").textContent = "No transactions yet. Add CSV exports to the raw/ folder and run `python3 -m fintrack build`.";
+    return;
+  }
+  $("subtitle").textContent = `${monthLabel(firstMonth)} – ${monthLabel(lastMonth)} · ${ACCTS.length} accounts · ${T.length.toLocaleString()} transactions`;
+  const full = yearly.filter((y) => y.full && y.earned > 0);
+  const lede = $("lede");
+  const b = (s) => { const e = el("b", {}, s); return e; };
+  if (full.length >= 2) {
+    const a = full[0], z = full[full.length - 1], n = +z.year - +a.year;
+    const g = (x, y) => (y / x - 1);
+    const cagr = Math.pow(z.earned / a.earned, 1 / n) - 1;
+    lede.append(`From ${a.year} to ${z.year}, what you earned went from `, b(compact(a.earned)), " to ", b(compact(z.earned)),
+      ` a year (${g(a.earned, z.earned) >= 0 ? "+" : ""}${pct(g(a.earned, z.earned))}, about ${pct(cagr)} a year). Spending went from `,
+      b(compact(a.spent)), " to ", b(compact(z.spent)), ` (${g(a.spent, z.spent) >= 0 ? "+" : ""}${pct(g(a.spent, z.spent))}). You kept `,
+      b(pct(a.rate)), " of what you earned in " + a.year + " and ", b(pct(z.rate)), " in " + z.year + ".");
+  } else {
+    const t = totals(() => true);
+    lede.append("So far you've earned ", b(money(t.earned)), " and spent ", b(money(t.spent)), ", keeping ", b(pct(t.rate)), ".");
+  }
+  const w = $("warnings");
+  for (const msg of D.warnings || []) w.append(el("div", { class: "warn muted" }, msg));
+}
+
+// ---------- overview (all time) ----------
+function overview() {
+  const all = totals(() => true);
+  kpis($("kpis-all"), all, null, "");
+  const labels = yearly.map((y) => y.full ? y.year : y.year + "*");
+  const titles = yearly.map((y) => y.full ? y.year : `${y.year} (${MONTHS[+y.months[0].slice(5) - 1]}–${MONTHS[+y.months[y.months.length - 1].slice(5) - 1]} only)`);
+  columns($("chart-years"), labels, [
+    { name: "Earned", color: "var(--earned)", values: yearly.map((y) => y.earned) },
+    { name: "Spent", color: "var(--spent)", values: yearly.map((y) => y.spent) },
+  ], { label: "Earned and spent by year", titles });
+  const w2 = Object.fromEntries((D.w2 || []).map((r) => [String(r.year), r]));
+  const hasW2 = D.w2 && D.w2.length;
+  const head = ["Year", "Earned", "vs prior yr", "Spent", "vs prior yr", "Saved", "Savings rate"];
+  if (hasW2) head.push("Gross pay (W-2)");
+  table($("table-years"), head, yearly.map((y) => {
+    const de = delta(y.earned, y.prev && y.prev.earned, true), ds = delta(y.spent, y.prev && y.prev.spent, false);
+    const r = [{ text: y.full ? y.year : `${y.year} (${y.months.length} mo)`, title: y.full ? "" : "Partial year: changes compare the same months of the year before" },
+      money(y.earned), { text: de.text || "–", cls: de.cls }, money(y.spent), { text: ds.text || "–", cls: ds.cls },
+      money(y.saved), pct(y.rate)];
+    if (hasW2) r.push(w2[y.year] ? money(w2[y.year].gross) : "–");
+    return r;
+  }));
+
+  lines($("chart-months"), allMonths, [
+    { name: "Earned", color: "var(--earned)", values: monthly.map((m) => m.earned) },
+    { name: "Spent", color: "var(--spent)", values: monthly.map((m) => m.spent) },
+  ], { label: "Earned and spent by month", extra: (i) => [{ name: "Saved", value: money(monthly[i].saved) }] });
+  table($("table-months"), ["Month", "Earned", "Spent", "Saved"],
+    monthly.slice().reverse().map((m) => [monthLabel(m.month), money(m.earned), money(m.spent), money(m.saved)]));
+
+  // Wealth: cumulative savings always; tracked balances when there are any.
+  let cum = 0; const cumVals = monthly.map((m) => (cum += m.saved));
+  const nw = D.networth;
+  const series = [{ name: "Total saved since " + monthLabel(firstMonth), color: "var(--earned)", values: cumVals, area: true }];
+  let nwVals = null;
+  if (nw) {
+    const idx = Object.fromEntries(nw.months.map((m, i) => [m, i]));
+    nwVals = allMonths.map((m) => (m in idx ? nw.total[idx[m]] : null));
+    if (nwVals.some((v) => v != null)) series.push({ name: "Balances (tracked accounts)", color: "var(--balance)", values: nwVals });
+    else nwVals = null;
+  }
+  $("wealth-title").textContent = nwVals ? "Savings and balances over time" : "Total saved over time";
+  $("wealth-note").textContent = nwVals
+    ? "Balances add up the accounts that report one: " + Object.keys(nw.accounts).join(", ") + ". Add others to balances.csv. The gap to “total saved” is roughly investment growth plus money you had before " + monthLabel(firstMonth) + "."
+    : "Running total of earned minus spent. Add balances.csv (or wallets) to also chart actual account balances.";
+  const lg = $("wealth-legend"); lg.replaceChildren();
+  if (series.length > 1) for (const s of series) { const sp = el("span"); const k = el("i", { class: "key-line" }); k.style.background = s.color; sp.append(k, s.name); lg.append(sp); }
+  lines($("chart-wealth"), allMonths, series, { label: "Wealth over time" });
+  table($("table-wealth"), ["Month", "Total saved"].concat(nwVals ? ["Balances"] : []),
+    allMonths.map((m, i) => [monthLabel(m), money(cumVals[i])].concat(nwVals ? [nwVals[i] == null ? "–" : money(nwVals[i])] : [])).reverse());
+
+  // W-2
+  if (hasW2) {
+    const rows = D.w2;
+    columns($("chart-w2"), rows.map((r) => String(r.year)), [{ name: "Gross pay", color: "var(--earned)", values: rows.map((r) => r.gross) }], { label: "Gross pay by year" });
+    table($("table-w2"), ["Year", "Employer", "Gross pay", "vs prior yr", "Taxes withheld", "Pre-tax deductions", "Left after both", "Tax rate"],
+      rows.map((r, i) => {
+        const d = i ? delta(r.gross, rows[i - 1].gross, true) : { text: "–", cls: "" };
+        return [String(r.year), { text: r.employer, cls: "l" }, money(r.gross), { text: d.text, cls: d.cls }, money(r.taxes), money(r.pretax),
+          money(r.gross - r.taxes - r.pretax), pct(r.gross ? r.taxes / r.gross : null)];
+      }), 2);
+  } else {
+    $("card-w2").replaceChildren(el("h3", {}, "Gross pay"), el("p", { class: "muted", style: "margin-top:6px" },
+      "Bank data only shows take-home pay. Add one line per year to w2.csv (gross pay, taxes withheld, pre-tax deductions from each W-2) to see what you really earned and what went to taxes and 401(k)."));
+  }
+
+  // Heatmap: category x year
+  const expCats = CATS.map((c, i) => ({ ...c, i })).filter((c) => c.kind === "expense");
+  const grid = expCats.map((c) => ({ name: c.name, vals: years.map((y) => -FLOW.filter((t) => t.cat === c.i && t.year === y).reduce((s, t) => s + t.amount, 0)) }))
+    .filter((r) => r.vals.some((v) => Math.abs(v) >= 1))
+    .sort((a, b) => b.vals.reduce((s, v) => s + v, 0) - a.vals.reduce((s, v) => s + v, 0));
+  const max = Math.max(1, ...grid.flatMap((r) => r.vals));
+  const host = $("table-heat"); host.replaceChildren();
+  const thead = el("thead"), htr = el("tr");
+  htr.append(el("th", { class: "l" }, "Category"));
+  yearly.forEach((y) => htr.append(el("th", {}, y.full ? y.year : `${y.year} (${y.months.length} mo)`)));
+  htr.append(el("th", {}, "Per month, last 12 mo"));
+  thead.append(htr);
+  const tbody = el("tbody");
+  const lo12 = shiftMonth(lastMonth, -11);
+  for (const r of grid) {
+    const tr = el("tr"); tr.append(el("td", { class: "l" }, r.name));
+    r.vals.forEach((v) => {
+      const lvl = v < 1 ? 0 : Math.min(6, 1 + Math.floor(Math.sqrt(v / max) * 6));
+      const td = el("td", {}, Math.abs(v) < 1 ? "–" : money(v));
+      td.style.background = `var(--h${lvl})`;
+      td.style.color = `var(--t${lvl})`;
+      tr.append(td);
+    });
+    const ci = CATS.findIndex((c) => c.name === r.name);
+    const last12 = -FLOW.filter((t) => t.cat === ci && t.month >= lo12).reduce((s, t) => s + t.amount, 0);
+    tr.append(el("td", {}, money(last12 / 12)));
+    tbody.append(tr);
+  }
+  host.append(thead, tbody);
+}
+
+// ---------- period section ----------
+const periods = [];
+function buildPeriods() {
+  if (!T.length) return;
+  const lo12 = shiftMonth(lastMonth, -11);
+  periods.push({ key: "12m", label: "Last 12 months", lo: lo12, hi: lastMonth, prev: [shiftMonth(lo12, -12), shiftMonth(lastMonth, -12)], prevLabel: "the 12 months before" });
+  for (const y of years.slice().reverse()) {
+    const ms = yearMonths(y);
+    periods.push({ key: y, label: isFullYear(y) ? y : `${y} (${MONTHS[+ms[0].slice(5) - 1]}–${MONTHS[+ms[ms.length - 1].slice(5) - 1]})`,
+      lo: ms[0], hi: ms[ms.length - 1], prev: [shiftMonth(ms[0], -12), shiftMonth(ms[ms.length - 1], -12)],
+      prevLabel: isFullYear(y) ? String(+y - 1) : `same months of ${+y - 1}` });
+  }
+  periods.push({ key: "all", label: "All time", lo: firstMonth, hi: lastMonth, prev: null });
+  const f = $("filters");
+  for (const p of periods) {
+    const b = el("button", { class: "chip", type: "button", "aria-pressed": "false", "data-key": p.key }, p.label);
+    b.addEventListener("click", () => selectPeriod(p.key));
+    f.append(b);
+  }
+}
+let period = null;
+function selectPeriod(key) {
+  period = periods.find((p) => p.key === key);
+  document.querySelectorAll("#filters .chip").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.key === key)));
+  const inP = inMonths(period.lo, period.hi);
+  const cur = totals(inP);
+  const prev = period.prev && period.prev[0] >= firstMonth ? totals(inMonths(period.prev[0], period.prev[1])) : null;
+  kpis($("kpis-period"), cur, prev, period.prevLabel || "");
+  hbars($("bars-spent"), "expense", inP, "var(--spent)", cur.spent, $("spent-total"));
+  hbars($("bars-earned"), "income", inP, "var(--earned)", cur.earned, $("earned-total"));
+  merchants(inP);
+  renderTx();
+}
+
+function hbars(host, kind, inP, color, total, totalEl) {
+  host.replaceChildren();
+  const sums = new Map();
+  for (const t of FLOW) if (t.kind === kind && inP(t)) sums.set(t.cat, (sums.get(t.cat) || 0) + (kind === "expense" ? -t.amount : t.amount));
+  const items = [...sums].filter(([, v]) => v >= 1).sort((a, b) => b[1] - a[1]);
+  totalEl.textContent = money(total) + " total";
+  if (!items.length) { host.append(el("div", { class: "empty" }, "Nothing in this period.")); return; }
+  const max = items[0][1];
+  for (const [ci, v] of items) {
+    const row = el("div", { class: "hrow" });
+    const track = el("div", { class: "ht" }); const bar = el("i", { class: "hb" });
+    bar.style.width = (v / max) * 100 + "%"; bar.style.background = color; track.append(bar);
+    const val = el("div", { class: "hv" }, money(v)); val.append(el("span", { class: "muted" }, pct(total > 0 ? v / total : null)));
+    const label = el("button", { class: "hl", type: "button", style: "all:unset;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap", title: "Show these transactions" }, CATS[ci].name);
+    label.addEventListener("click", () => { $("tx-kind").value = kind === "expense" ? "spend" : "earn"; fillCatSelect(); $("tx-cat").value = String(ci); renderTx(); $("table-tx").scrollIntoView({ behavior: "smooth", block: "start" }); });
+    row.append(label, track, val);
+    host.append(row);
+  }
+}
+
+function merchants(inP) {
+  const g = new Map();
+  for (const t of FLOW) if (t.kind === "expense" && inP(t)) {
+    const r = g.get(t.merchant) || { total: 0, n: 0, cats: new Map() };
+    r.total -= t.amount; r.n++; r.cats.set(t.cat, (r.cats.get(t.cat) || 0) + 1);
+    g.set(t.merchant, r);
+  }
+  const rows = [...g].sort((a, b) => b[1].total - a[1].total).slice(0, 20);
+  table($("table-merchants"), ["Merchant", "Category", "Times", "Total", "Average"], rows.map(([name, r]) => {
+    const top = [...r.cats].sort((a, b) => b[1] - a[1])[0][0];
+    return [name, { text: CATS[top].name, cls: "l" }, String(r.n), money(r.total), money(r.total / r.n)];
+  }), 2);
+}
+
+function fillCatSelect() {
+  const kind = $("tx-kind").value, sel = $("tx-cat"), prev = sel.value;
+  const ok = (k) => kind === "all" || (kind === "spend" && k === "expense") || (kind === "earn" && k === "income") || (kind === "move" && (k === "transfer" || k === "investment"));
+  sel.replaceChildren(el("option", { value: "" }, "All categories"));
+  CATS.forEach((c, i) => { if (ok(c.kind)) sel.append(el("option", { value: String(i) }, c.name)); });
+  if ([...sel.options].some((o) => o.value === prev)) sel.value = prev;
+}
+let txLimit = 50;
+function renderTx(keepLimit) {
+  if (!period) return;
+  if (keepLimit !== true) txLimit = 50;
+  const q = $("tx-q").value.trim().toLowerCase(), kind = $("tx-kind").value, cat = $("tx-cat").value, acct = $("tx-acct").value;
+  const ok = (k) => kind === "all" || (kind === "spend" && k === "expense") || (kind === "earn" && k === "income") || (kind === "move" && (k === "transfer" || k === "investment"));
+  const inP = inMonths(period.lo, period.hi);
+  const rows = T.filter((t) => inP(t) && ok(t.kind) && (cat === "" || t.cat === +cat) && (acct === "" || t.acct === +acct) &&
+    (!q || t.merchant.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q)));
+  const sum = rows.reduce((s, t) => s + t.amount, 0);
+  $("tx-summary").textContent = `${rows.length.toLocaleString()} transactions · net ${money(sum)}`;
+  $("tx-more").style.display = rows.length > txLimit ? "" : "none";
+  $("tx-more").textContent = `Show more (${Math.min(txLimit, rows.length)} of ${rows.length.toLocaleString()} shown)`;
+  table($("table-tx"), ["Date", "Merchant", "Category", "Account", "Amount", "Description"],
+    rows.slice().reverse().slice(0, txLimit).map((t) => [t.date, { text: t.merchant, cls: "l" }, { text: CATS[t.cat].name, cls: "l" }, { text: ACCTS[t.acct].name, cls: "l" },
+      { text: cents(t.amount), cls: t.amount > 0 ? "pos" : "neg" }, { text: t.desc, cls: "desc", title: "id " + t.id }]), 4);
+}
+function txControls() {
+  const a = $("tx-acct"); a.append(el("option", { value: "" }, "All accounts"));
+  ACCTS.forEach((x, i) => a.append(el("option", { value: String(i) }, x.name)));
+  fillCatSelect();
+  let timer;
+  $("tx-q").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(renderTx, 120); });
+  $("tx-kind").addEventListener("change", () => { fillCatSelect(); renderTx(); });
+  $("tx-cat").addEventListener("change", renderTx);
+  $("tx-acct").addEventListener("change", renderTx);
+  $("tx-more").addEventListener("click", () => { txLimit += 200; renderTx(true); });
+}
+
+// ---------- data health ----------
+function health() {
+  const lo = firstMonth ? firstMonth + "-01" : "", hi = T.length ? T[T.length - 1].date : "";
+  const span = lo && hi ? (Date.parse(hi) - Date.parse(lo)) || 1 : 1;
+  const host = $("table-accounts"); host.replaceChildren();
+  const thead = el("thead"), tr = el("tr");
+  ["Account", "Type", "Format", "From", "To", "Transactions", "Coverage"].forEach((h, i) => tr.append(el("th", i < 3 || i === 6 ? { class: "l" } : {}, h)));
+  thead.append(tr);
+  const tbody = el("tbody");
+  for (const a of ACCTS) {
+    const row = el("tr");
+    row.append(el("td", { class: "l" }, a.name), el("td", { class: "l" }, a.type || "–"), el("td", { class: "l" }, (a.formats || []).join(", ")),
+      el("td", {}, a.first || "–"), el("td", {}, a.last || "–"), el("td", {}, String(a.count)));
+    const td = el("td", { class: "l", style: "width:30%" });
+    const line = el("div", { class: "timeline" });
+    if (a.first && lo) {
+      const bar = el("i");
+      bar.style.left = Math.max(0, (Date.parse(a.first) - Date.parse(lo)) / span) * 100 + "%";
+      bar.style.width = Math.max(1, ((Date.parse(a.last) - Date.parse(a.first)) / span) * 100) + "%";
+      line.append(bar);
+    }
+    line.title = a.first ? `${a.first} → ${a.last}` : "no transactions";
+    td.append(line); row.append(td); tbody.append(row);
+  }
+  host.append(thead, tbody);
+
+  const unc = new Map();
+  for (const t of T) if (CATS[t.cat].name.startsWith("Uncategorized")) {
+    const r = unc.get(t.merchant) || { n: 0, total: 0, desc: t.desc, acct: ACCTS[t.acct].name };
+    r.n++; r.total += t.amount; unc.set(t.merchant, r);
+  }
+  const urows = [...unc].sort((a, b) => Math.abs(b[1].total) - Math.abs(a[1].total)).slice(0, 25);
+  if (urows.length) table($("table-uncat"), ["Merchant", "Times", "Total", "Example"], urows.map(([m, r]) => [m, String(r.n), money(r.total), { text: `${r.acct}: ${r.desc}`, cls: "desc" }]));
+  else $("table-uncat").replaceChildren(el("caption", { class: "empty" }, "Everything has a category."));
+
+  const ex = new Map();
+  for (const t of T) if (t.kind === "transfer" || t.kind === "investment") {
+    const r = ex.get(t.cat) || { in: 0, out: 0, n: 0 }; if (t.amount > 0) r.in += t.amount; else r.out -= t.amount; r.n++; ex.set(t.cat, r);
+  }
+  table($("table-excluded"), ["Category", "Times", "Money in", "Money out"], [...ex].sort((a, b) => b[1].out - a[1].out).map(([c, r]) => [CATS[c].name, String(r.n), money(r.in), money(r.out)]));
+  $("footer").textContent = `Generated ${D.generated} by fintrack. This file contains your financial data: keep it private.`;
+}
+
+// ---------- boot ----------
+header();
+if (T.length) {
+  overview();
+  buildPeriods();
+  txControls();
+  selectPeriod("12m");
+}
+health();
+let rt;
+window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (T.length) { hideTip(); overview(); } }, 150); });
+</script>
+</body>
+</html>
